@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <RollingFile
+                name="RollingFile"
+                filename="${sys:user.home}/Ease/ease.log"
+                filePattern="${sys:user.home}/Ease/${date:yyy-MM}/ease_%d{yyyMMdd}.log.gz"
+                append="false">
+            <PatternLayout>
+                <Pattern>%d [%-5p] %c{1} -> %m%n</Pattern>
+            </PatternLayout>
+            <TimeBasedTriggeringPolicy />
+            <DefaultRolloverStrategy>
+                <Delete basePath="${sys:user.home}/Ease/" maxDepth="2">
+                    <IfFileName glob="*.log.gz" />
+                    <IfLastModified age="1d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="all">
+            <AppenderRef ref="RollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
