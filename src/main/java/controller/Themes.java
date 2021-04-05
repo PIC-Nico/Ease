@@ -9,7 +9,7 @@ public class Themes {
 
     private Themes() {
         themes.add(new Theme(
-                "Light",
+                "Hell",
                 new Color(0xF3F3F3), // background
                 new Color(0x000000), // foreground
                 new Color(0xDEDEDE), // window control hover
@@ -34,11 +34,18 @@ public class Themes {
                 new Color(0xFFFFFF), // sidebar dangerous menu hover foreground
                 new Color(0xE23545), // sidebar dangerous menu hover background
                 new Color(0xFFFFFF), // sidebar highlight menu hover foreground
-                new Color(0x3065AF)  // sidebar highlight menu hover background
+                new Color(0x3065AF), // sidebar highlight menu hover background
+                new Color(0x000000), // sidebar active menu hover foreground
+                new Color(0xF3F3F3), // sidebar active menu hover background
+                new Color(0x3065AF), // sidebar active menu highlight background
+                new Color(0xF3F3F3), // sidebar active menu background
+                new Color(0xBDBDBD), // window border
+                new Color(0xF3F3F3), // combobox background
+                new Color(0xE3E3E3)  // combobox hover background
         ));
 
         themes.add(new Theme(
-                "Dark",
+                "Dunkel",
                 new Color(0x222222), // background
                 new Color(0xFFFFFF), // foreground
                 new Color(0x444444), // window control hover
@@ -59,11 +66,18 @@ public class Themes {
                 new Color(0xFFFFFF), // important tooltip foreground
                 new Color(0x2D2D2D), // sidebar background
                 new Color(0xFFFFFF), // sidebar menu hover foreground
-                new Color(0x3B3B3B), // sidebar menu hover background
+                new Color(0x222222), // sidebar menu hover background
                 new Color(0xFFFFFF), // sidebar dangerous menu hover foreground
                 new Color(0xE23545), // sidebar dangerous menu hover background
                 new Color(0xFFFFFF), // sidebar highlight menu hover foreground
-                new Color(0x3065AF)  // sidebar highlight menu hover background
+                new Color(0x3065AF), // sidebar highlight menu hover background
+                new Color(0xFFFFFF), // sidebar active menu hover foreground
+                new Color(0x222222), // sidebar active menu hover background
+                new Color(0x3065AF), // sidebar active menu highlight background
+                new Color(0x222222), // sidebar active menu background
+                new Color(0x656565), // window border
+                new Color(0x222222), // combobox background
+                new Color(0x3B3B3B)  // combobox hover background
         ));
     }
 
@@ -90,5 +104,13 @@ public class Themes {
 
         // requested theme was not found
         return null;
+    }
+
+    /**
+     * This will return with a list containing all available color themes.
+     * @return List containing all available color themes.
+     */
+    public ArrayList<Theme> getThemes() {
+        return themes;
     }
 }

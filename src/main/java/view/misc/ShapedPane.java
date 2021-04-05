@@ -1,4 +1,4 @@
-package view;
+package view.misc;
 
 import controller.Config;
 

@@ -8,6 +8,7 @@ import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
 import java.util.prefs.Preferences;
 
 public class Config {
@@ -40,17 +41,29 @@ public class Config {
     private final String APPEARANCE_FONT_SIZE_M  = "Appearance:Font:Size:Medium";
     private final String APPEARANCE_FONT_SIZE_L  = "Appearance:Font:Size:Large";
     private final String APPEARANCE_FONT_SIZE_XL = "Appearance:Font:Size:ExtraLarge";
+    private final String APPEARANCE_FONT_SIZE_ACTIVE = "Appearance:Font:Size:Active";
 
     // default values
     private final String DEFAULT_ROOT_PATH = System.getProperty("user.home") + "\\AppData\\Local\\Ease\\";
-    private final String DEFAULT_THEME = "Light";
-    private final String FONT_FAMILY = "Century Gothic";
-//    private final String FONT_FAMILY = "Segoe UI Light";
+    private final String DEFAULT_THEME = "Hell";
+    private final String DEFAULT_FONT_FAMILY = "Century Gothic";
+    //private final String FONT_FAMILY = "Segoe UI Light";
+    private final String DEFAULT_FONT_SIZE = "Normal";
+
     private final int FONT_SIZE_XS = 10;
     private final int FONT_SIZE_S  = 12;
     private final int FONT_SIZE_M  = 14;
     private final int FONT_SIZE_L  = 18;
     private final int FONT_SIZE_XL = 22;
+
+    // list of available font sizes
+    private final ArrayList<String> fontSizes = new ArrayList<String>() {{
+        add("Klein");
+        add("Normal");
+        add("Groß");
+    }};
+    private String activeFontSize;
+    private int fontSizeOffset = 0;
 
     // user configurations
     private Theme theme;
@@ -97,7 +110,7 @@ public class Config {
         theme = Themes.getInstance().getTheme(prefs.get(APPEARANCE_THEME, DEFAULT_THEME));
 
         // load the user font
-        String fontFamily = prefs.get(APPEARANCE_FONT_FAMILY, FONT_FAMILY);
+        String fontFamily = prefs.get(APPEARANCE_FONT_FAMILY, DEFAULT_FONT_FAMILY);
 
         fontSizeXS = prefs.getInt(APPEARANCE_FONT_SIZE_XS, FONT_SIZE_XS);
         fontSizeS  = prefs.getInt(APPEARANCE_FONT_SIZE_S, FONT_SIZE_S);
@@ -105,7 +118,30 @@ public class Config {
         fontSizeL  = prefs.getInt(APPEARANCE_FONT_SIZE_L, FONT_SIZE_L);
         fontSizeXL = prefs.getInt(APPEARANCE_FONT_SIZE_XL, FONT_SIZE_XL);
 
-        font = new Font(fontFamily, Font.PLAIN, fontSizeM);
+        activeFontSize = prefs.get(APPEARANCE_FONT_SIZE_ACTIVE, DEFAULT_FONT_SIZE);
+        updateFontSizeOffset();
+
+        // init the base/normal font
+        font = new Font(fontFamily, Font.PLAIN, FONT_SIZE_M + fontSizeOffset);
+    }
+
+    /**
+     * This will update the font size offset accordingly to the current active font size setting.
+     */
+    private void updateFontSizeOffset() {
+        switch(activeFontSize) {
+            case "Klein": {
+                fontSizeOffset = -2;
+                break;
+            }
+            case "Groß": {
+                fontSizeOffset = 2;
+                break;
+            }
+            default: {
+                fontSizeOffset = 0;
+            }
+        }
     }
 
     /**
@@ -113,7 +149,7 @@ public class Config {
      * @return The extrasmall font
      */
     public Font getExtraSmallFont() {
-        return new Font(font.getName(), font.getStyle(), fontSizeXS);
+        return new Font(font.getName(), font.getStyle(), fontSizeXS + fontSizeOffset);
     }
 
     /**
@@ -121,7 +157,7 @@ public class Config {
      * @return The small font
      */
     public Font getSmallFont() {
-        return new Font(font.getName(), font.getStyle(), fontSizeS);
+        return new Font(font.getName(), font.getStyle(), fontSizeS + fontSizeOffset);
     }
 
     /**
@@ -129,7 +165,7 @@ public class Config {
      * @return The main system font.
      */
     public Font getNormalFont() {
-        return font;
+        return new Font(font.getName(), font.getStyle(), fontSizeM + fontSizeOffset);
     }
 
     /**
@@ -137,7 +173,7 @@ public class Config {
      * @return The large font
      */
     public Font getLargeFont() {
-        return new Font(font.getName(), font.getStyle(), fontSizeL);
+        return new Font(font.getName(), font.getStyle(), fontSizeL+ fontSizeOffset);
     }
 
     /**
@@ -145,21 +181,21 @@ public class Config {
      * @return The extra large font
      */
     public Font getExtraLargeFont() {
-        return new Font(font.getName(), font.getStyle(), fontSizeXL);
+        return new Font(font.getName(), font.getStyle(), fontSizeXL + fontSizeOffset);
     }
 
     public Font getBoldFont() {
-        return new Font(font.getName(), Font.BOLD, fontSizeM);
+        return new Font(font.getName(), Font.BOLD, fontSizeM + fontSizeOffset);
     }
 
     /**
      * This will change the system font family.
      * @param family The new font family.
      */
-    public void setFontFamily(String family) {
+    private void setFontFamily(String family) {
         String old = font.getFamily();
 
-        font = new Font(family, font.getStyle(), font.getSize());
+        font = new Font(family, font.getStyle(), font.getSize() + fontSizeOffset);
 
         if(font != null) {
             PropertyChangeEvent evt = new PropertyChangeEvent(
@@ -202,7 +238,28 @@ public class Config {
 
             // notify about the change
             propertyChangeSupport.firePropertyChange(evt);
+
+            // save as new default
+            prefs.put(APPEARANCE_THEME, theme.getName());
         }
+    }
+
+    public void setFontSize(String fontSize) {
+        String oldFont = activeFontSize;
+        String newFont = fontSize;
+
+        activeFontSize = fontSize;
+        updateFontSizeOffset();
+        prefs.put(APPEARANCE_FONT_SIZE_ACTIVE, fontSize);
+
+        PropertyChangeEvent evt = new PropertyChangeEvent(
+                getNormalFont(),
+                "Font",
+                oldFont,
+                newFont
+        );
+
+        propertyChangeSupport.firePropertyChange(evt);
     }
 
     /**
@@ -227,5 +284,21 @@ public class Config {
      */
     public String getAppRootPath() {
         return rootPath;
+    }
+
+    /**
+     * Get a list of all available font sizes (ASCII description).
+     * @return List of availavbe font sizes.
+     */
+    public ArrayList<String> getFontSizes() {
+        return fontSizes;
+    }
+
+    /**
+     * Get the active font size (ASCII description).
+     * @return Active font size (ASCII description).
+     */
+    public String getFontSize() {
+        return activeFontSize;
     }
 }

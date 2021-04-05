@@ -1,26 +1,35 @@
-package view.menus;
+package view.settings.pages;
 
-import view.EForm;
+import view.misc.EForm;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class MenuCustomers extends EForm {
+public class PageCategories extends EForm {
+    private static final PageCategories OBJ = new PageCategories();
+
     private JPanel contentPane;
+    private JPanel menuPane;
     private JLabel labelTitle;
     private JLabel labelIntro;
 
-    public MenuCustomers() {
+    private PageCategories() {
         super();
+        setContentPane(contentPane);
+        setMenu(menuPane);
         init();
     }
 
+    public static PageCategories getInstance() {
+        return OBJ;
+    }
+
     /**
-     * This will return with the content pane.
+     * This will return with the menu pane.
      * @return Content pane.
      */
-    public JPanel getContentPane() {
-        return contentPane;
+    public JPanel getMenu() {
+        return menuPane;
     }
 
     /**

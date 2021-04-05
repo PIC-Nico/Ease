@@ -1,20 +1,13 @@
 package view;
 
-import com.intellij.uiDesigner.core.GridConstraints;
-import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
-import controller.Config;
 import model.Users;
 import org.mindrot.jbcrypt.BCrypt;
+import view.misc.EForm;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import javax.swing.plaf.FontUIResource;
-import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Arrays;
-import java.util.Locale;
 
 public class CreateUser extends EForm {
     private JPanel contentPane;
@@ -27,11 +20,11 @@ public class CreateUser extends EForm {
 
     public CreateUser() {
         super();
-        shapedPane.add(contentPane);
+        setContentPane(contentPane);
 
         windowTitle = "Neuer Benutzer";
-        windowIcon = "icons/window/logo_32.png";
-        titleIcon = "icons/window/logo_16.png";
+        windowIcon = "icons/misc/32/logo.png";
+        titleIcon = "icons/misc/16/logo.png";
         resizeable = false;
 
         init();

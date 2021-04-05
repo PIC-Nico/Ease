@@ -1,20 +1,15 @@
 package view;
 
-import com.intellij.uiDesigner.core.GridConstraints;
-import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import controller.Config;
 import controller.Theme;
 import model.Users;
 import org.mindrot.jbcrypt.BCrypt;
+import view.main.Home;
+import view.misc.EForm;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import javax.swing.plaf.FontUIResource;
-import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.Locale;
 
 public class Login extends EForm {
     private JPanel contentPane;
@@ -34,14 +29,15 @@ public class Login extends EForm {
 
     public Login() {
         super();
-        shapedPane.add(contentPane);
+        setContentPane(contentPane);
 
         windowTitle = "Login";
-        windowIcon = "icons/window/logo_32.png";
-        titleIcon = "icons/window/logo_16.png";
+        windowIcon = "icons/misc/32/logo.png";
+        titleIcon = "icons/misc/16/logo.png";
         resizeable = false;
         minWidth = contentPane.getPreferredSize().width + 100;
         minHeight = contentPane.getPreferredSize().height;
+        exitOnClose = true;
 
         init();
         addListener();

@@ -1,6 +1,7 @@
 package controller;
 
-import javax.swing.border.EmptyBorder;
+import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
 
 public class Theme {
@@ -16,6 +17,9 @@ public class Theme {
     private final Color textBackground;
     private final Color importantButtonForeground;
     private final Color highlightButtonForeground;
+
+    // window
+    private final Color activeWindowBorder;
 
     // window controls
     private final Color windowControlHover;
@@ -40,9 +44,20 @@ public class Theme {
     private final Color sidebarDangerousMenuHoverForeground;
     private final Color sidebarHighlightMenuHoverBackground;
     private final Color sidebarHighlightMenuHoverForeground;
+    private final Color sidebarActiveMenuHoverBackground;
+    private final Color sidebarActiveMenuHoverForeground;
+    private final Color sidebarActiveMenuHighlight;
+    private final Color sidebarActiveMenuBackground;
+
+    // combobox
+    private final Color comboboxBackground;
+    private final Color comboboxHoverBackground;
 
     // border
-    private final EmptyBorder sidebarMenuBorder = new EmptyBorder(12,24,12,24);
+    private final EmptyBorder sidebarMenuBorder;
+    private final CompoundBorder sidebarActiveMenuBorder;
+    private final EmptyBorder inactiveWindowBorder;
+    private final LineBorder windowBorder;
 
     public Theme(
             String name,
@@ -70,7 +85,14 @@ public class Theme {
             Color sidebarDangerousMenuHoverForeground,
             Color sidebarDangerousMenuHoverBackground,
             Color sidebarHighlightMenuHoverForeground,
-            Color sidebarHighlightMenuHoverBackground
+            Color sidebarHighlightMenuHoverBackground,
+            Color sidebarActiveMenuHoverForeground,
+            Color sidebarActiveMenuHoverBackground,
+            Color sidebarActiveMenuHighlight,
+            Color sidebarActiveMenuBackground,
+            Color activeWindowBorder,
+            Color comboboxBackground,
+            Color comboboxHoverBackground
     ) {
         this.name = name;
 
@@ -104,6 +126,57 @@ public class Theme {
         this.sidebarDangerousMenuHoverBackground = sidebarDangerousMenuHoverBackground;
         this.sidebarHighlightMenuHoverBackground = sidebarHighlightMenuHoverBackground;
         this.sidebarHighlightMenuHoverForeground = sidebarHighlightMenuHoverForeground;
+        this.sidebarActiveMenuHoverBackground = sidebarActiveMenuHoverBackground;
+        this.sidebarActiveMenuHoverForeground = sidebarActiveMenuHoverForeground;
+        this.sidebarActiveMenuHighlight = sidebarActiveMenuHighlight;
+        this.sidebarActiveMenuBackground = sidebarActiveMenuBackground;
+
+        this.comboboxBackground = comboboxBackground;
+        this.comboboxHoverBackground = comboboxHoverBackground;
+
+        this.activeWindowBorder = activeWindowBorder;
+        windowBorder = new LineBorder(activeWindowBorder);
+
+        // create some border
+        Border outsideBorder = new MatteBorder(0,6,0,0, sidebarActiveMenuHighlight);
+        Border insideBorder = new EmptyBorder(12,18,12,24);
+
+        sidebarActiveMenuBorder = BorderFactory.createCompoundBorder(outsideBorder, insideBorder);
+        sidebarMenuBorder = new EmptyBorder(12,24,12,24);
+
+        inactiveWindowBorder = new EmptyBorder(1,1,1,1);
+    }
+
+    public Color getComboboxBackground() {
+        return comboboxBackground;
+    }
+
+    public Color getComboboxHoverBackground() {
+        return comboboxHoverBackground;
+    }
+
+    public LineBorder getWindowBorder() {
+        return windowBorder;
+    }
+
+    public Color getActiveWindowBorder() {
+        return activeWindowBorder;
+    }
+
+    public Color getSidebarActiveMenuBackground() {
+        return sidebarActiveMenuBackground;
+    }
+
+    public Color getSidebarActiveMenuHoverBackground() {
+        return sidebarActiveMenuHoverBackground;
+    }
+
+    public Color getSidebarActiveMenuHoverForeground() {
+        return sidebarActiveMenuHoverForeground;
+    }
+
+    public Color getSidebarActiveMenuHighlight() {
+        return sidebarActiveMenuHighlight;
     }
 
     public Color getSidebarHighlightMenuHoverBackground() {
@@ -210,7 +283,15 @@ public class Theme {
         return foreground;
     }
 
-    public EmptyBorder getSidebarMenuBorder() {
+    public Border getSidebarMenuBorder() {
         return sidebarMenuBorder;
+    }
+
+    public Border getSidebarActiveMenuBorder() {
+        return sidebarActiveMenuBorder;
+    }
+
+    public EmptyBorder getInactiveWindowBorder() {
+        return inactiveWindowBorder;
     }
 }

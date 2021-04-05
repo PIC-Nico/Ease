@@ -1,46 +1,42 @@
-package view.menus;
+package view.main.pages;
 
 import model.Users;
-import view.EForm;
+import view.misc.EForm;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class MenuOverview extends EForm {
+public class PageOverview extends EForm {
+    private final static PageOverview OBJ = new PageOverview();
+
     private JLabel labelTitle;
     private JLabel labelIntro;
-    private JPanel contentPane;
     private JButton lightButton;
     private JButton darkButton;
+    private JPanel menuPane;
+    private JPanel contentPane;
 
-    public MenuOverview() {
+    private PageOverview() {
         super();
+        setContentPane(contentPane);
+        setMenu(menuPane);
         init();
 
         printHello();
+    }
 
-        lightButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                config.setTheme("Light");
-            }
-        });
-        darkButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                config.setTheme("Dark");
-            }
-        });
+    public static PageOverview getInstance() {
+        return OBJ;
     }
 
     /**
-     * This will return with the content pane.
+     * This will return with the menu pane.
      * @return Content pane.
      */
-    public JPanel getContentPane() {
-        return contentPane;
+    public JPanel getMenu() {
+        return menuPane;
     }
 
     /**
@@ -56,6 +52,9 @@ public class MenuOverview extends EForm {
      * This will print a hello user message.
      */
     private void printHello() {
-        labelTitle.setText("Hallo " + Users.getInstance().getActiveUser() + ",");
+        String userFirstName = Users.getInstance().getActiveUser();
+        userFirstName = userFirstName.substring(0, userFirstName.indexOf(" "));
+
+        labelTitle.setText("Hallo " + userFirstName + ",");
     }
 }

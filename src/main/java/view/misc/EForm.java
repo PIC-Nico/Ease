@@ -1,15 +1,15 @@
-package view;
+package view.misc;
 
-import controller.ComponentResizer;
-import controller.Config;
-import controller.Main;
-import controller.Theme;
+import com.intellij.uiDesigner.core.GridLayoutManager;
+import controller.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
+import javax.swing.plaf.basic.BasicComboPopup;
 import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
@@ -23,7 +23,6 @@ import static controller.Utils.getImageFromResource;
  * Ease base form
  */
 public class EForm extends JFrame implements PropertyChangeListener {
-    protected final ShapedPane shapedPane = new ShapedPane();
     protected Config config = Config.getInstance();
 
     // to resize the undecorated form
@@ -33,7 +32,10 @@ public class EForm extends JFrame implements PropertyChangeListener {
     protected final Logger logger = LogManager.getLogger(Main.class);
 
     // can be used to deny adding a component resizer
-    public boolean adddResizer = false;
+    public boolean addResizer = false;
+
+    // parent of this form (e.g. Home is the parent for PageOverview)
+    private EForm parent;
 
     // list of all components within the frame
     private ArrayList<JLabel> allLabels;
@@ -41,6 +43,11 @@ public class EForm extends JFrame implements PropertyChangeListener {
     private ArrayList<JTextField> allTextFields;
     private ArrayList<JCheckBox> allCheckBoxes;
     private ArrayList<JButton> allButtons;
+    private ArrayList<JComboBox> allComboBoxes;
+    private ArrayList<JSeparator> allSeparators;
+
+    // list of all pages
+    public ArrayList<EForm> pages;
 
     // window state control components
     private JLabel labelWindowTitle;
@@ -61,17 +68,31 @@ public class EForm extends JFrame implements PropertyChangeListener {
     public int minHeight;
     public boolean resizeable = true;
 
+    // menu components
+    private JPanel menu;
+    private JPanel sidebar;
+    private JLabel activeSidebarMenu;
+
+    // current active menu (necessary to restore before change to another menu)
+    public EForm activeMenu;
+
+    // list to hold all sidebar menus
+    public ArrayList<JLabel> sidebarMenus;
+
     // window position/state
     private int x;
     private int y;
     private boolean isMaximized;
-    public int radius = 0; // set to >0 for round corners
 
     // will be used to get the location of a mouse click
     private Point click;
 
     // can be used to show additional information
     public Tooltip tooltip;
+
+    // window misc
+    public boolean paintWindowBorder;
+    public boolean exitOnClose;
 
     /**
      * The default constructor
@@ -82,13 +103,6 @@ public class EForm extends JFrame implements PropertyChangeListener {
         // set some window properties
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setUndecorated(true);
-        setContentPane(shapedPane);
-
-        // if radius > 0 we need to make the frame transparent (round corners)
-        if(radius > 0) {
-            shapedPane.setRadius(radius);
-            setBackground(new Color(0, 0, 0, 0));
-        }
 
         // add property change listener to the config
         config.addPropertyChangeListener(this);
@@ -103,34 +117,239 @@ public class EForm extends JFrame implements PropertyChangeListener {
         allTextFields = new ArrayList<>();
         allCheckBoxes = new ArrayList<>();
         allButtons = new ArrayList<>();
+        allComboBoxes = new ArrayList<>();
+        allSeparators = new ArrayList<>();
+
+        pages = new ArrayList<>();
     }
 
     /**
      * Do some very basic initialization for the ease form.
      */
     protected void init() {
+        initSidebar();
         collectAllComponents(getContentPane());
         tooltip = new Tooltip(paneTitle);
-        applyWindowSettings();
+        addPages();
         applyComponentSettings();
         applyListener();
         applyThemeChange(Config.getInstance().getTheme());
         applyFontChange(Config.getInstance().getNormalFont());
-        pack();
+        applyWindowSettings();
+
+        // open the first page (if pages are available for this form)
+        if(!pages.isEmpty()) {
+            openMenu(pages.get(0));
+        }
+
+        // open the window centered
+        setLocationRelativeTo(null);
+    }
+
+    public void setParent (EForm parent) {
+        this.parent = parent;
+        parent.updateSize(this);
+    }
+
+    protected void setMenu(JPanel menu) {
+        this.menu = menu;
+    }
+
+    protected void setSidebar(JPanel sidebar) {
+        this.sidebar = sidebar;
+    }
+
+    /**
+     * This will handle the complete init of the sidebar.
+     */
+    private void initSidebar() {
+        if(sidebar == null) {
+            return;
+        }
+
+        sidebarMenus = new ArrayList<>();
+
+        collectSidebarMenus(sidebar);
+        activeSidebarMenu = sidebarMenus.get(0);
+        setMenusProperties();
+        styleSidebar(config.getTheme());
+        addSidebarListener();
+        addSidebarMenuListener();
+    }
+
+    /**
+     * Use this to set some menu item descriptions.
+     */
+    public void setMenusProperties() {
+    }
+
+    /**
+     * This will collect all components of the sidebar.
+     * Note: Will be called recursive (once another container was found).
+     * @param container Container to search through.
+     */
+    private void collectSidebarMenus(Container container) {
+        // iterate over all components of the sidebar
+        for (int i = 0; i < container.getComponentCount(); i++) {
+            Component c = container.getComponent(i);
+
+            // add if this is a label
+            if (c instanceof JLabel) {
+                sidebarMenus.add((JLabel) c);
+            } else if(c instanceof JPanel) {
+                collectSidebarMenus((Container) c);
+            }
+        }
+    }
+
+    /**
+     * This will handle styling the sidebar.
+     * @param theme Active theme to apply to the sidebar.
+     */
+    private void styleSidebar(Theme theme) {
+        if(sidebar == null) {
+            return;
+        }
+
+        sidebar.setBackground(theme.getSidebarBackground());
+        sidebarMenus.forEach(x -> {
+            x.setOpaque(true);
+
+            Color bg = theme.getSidebarBackground();
+            Border border = theme.getSidebarMenuBorder();
+
+            if(x.equals(activeSidebarMenu)) {
+                bg = theme.getSidebarActiveMenuBackground();
+                border = theme.getSidebarActiveMenuBorder();
+            }
+
+            x.setBackground(bg);
+            x.setBorder(border);
+            x.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        });
+    }
+
+    /**
+     * This will add basic listeners to the sidebar (e.g. mouse hover).
+     */
+    private void addSidebarListener() {
+        sidebarMenus.forEach(x -> {
+            x.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    activeSidebarMenu = (JLabel) e.getComponent();
+                    styleSidebar(config.getTheme());
+
+                    // check which menu was clicked and open its page
+                    for(int i=0; i<sidebarMenus.size(); ++i) {
+                        if(sidebarMenus.get(i).equals(activeSidebarMenu)) {
+                            if(i < pages.size()) {
+                                if(pages.get(i) != null) {
+                                    openMenu(pages.get(i));
+                                }
+                            } else {
+                                logger.warn("No page available for: " + activeSidebarMenu.getText());
+                            }
+                        }
+                    }
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    handleSidebarMenuHover(e.getComponent());
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    Color fg = config.getTheme().getForeground();
+                    Color bg = config.getTheme().getSidebarBackground();
+
+                    if(e.getComponent().equals(activeSidebarMenu)) {
+                        bg = config.getTheme().getSidebarActiveMenuBackground();
+                    }
+
+                    e.getComponent().setForeground(fg);
+                    e.getComponent().setBackground(bg);
+                }
+            });
+        });
+    }
+
+    /**
+     * This will handle sidebar menu mouse hover events.
+     */
+    private void handleSidebarMenuHover(Component c) {
+        String description = c.getAccessibleContext().getAccessibleDescription();
+
+        Color fg = config.getTheme().getSidebarMenuHoverForeground();
+        Color bg = config.getTheme().getSidebarMenuHoverBackground();
+
+        if(description != null) {
+            switch (description) {
+                case "Dangerous": {
+                    fg = config.getTheme().getSidebarDangerousMenuHoverForeground();
+                    bg = config.getTheme().getSidebarDangerousMenuHoverBackground();
+                    break;
+                }
+                case "Highlight": {
+                    fg = config.getTheme().getSidebarHighlightMenuHoverForeground();
+                    bg = config.getTheme().getSidebarHighlightMenuHoverBackground();
+                    break;
+                }
+            }
+        }
+
+        if(c.equals(activeSidebarMenu)) {
+            fg = config.getTheme().getSidebarActiveMenuHoverForeground();
+            bg = config.getTheme().getSidebarActiveMenuHoverBackground();
+        }
+
+        c.setForeground(fg);
+        c.setBackground(bg);
+    }
+
+    /**
+     * This will add mouse listener to all sidebar menu items.
+     */
+    public void addSidebarMenuListener() {
+    }
+
+    /**
+     * This needs to be overwritten in order to add pages to the list.
+     */
+    public void addPages() {
+    }
+
+    /**
+     * This will open a menu inside the menuPane.
+     * @param menu The menu to open (represented as JPanel with its components).
+     */
+    protected void openMenu(EForm menu) {
+        if(activeMenu != null) {
+            transfer(this.menu, activeMenu.getMenu());
+        }
+
+        // load the new menu
+        transfer(menu.getMenu(), this.menu);
+
+        // save the new as active menu
+        activeMenu = menu;
+
+        this.menu.updateUI();
     }
 
     /**
      * This needs to be called once on start to set some window settings.
      */
     private void applyWindowSettings() {
+        // set the minimum window size
         if(minWidth > 0 && minHeight > 0) {
             setMinimumSize(new Dimension(minWidth, minHeight));
         } else {
-            setMinimumSize(getContentPane().getPreferredSize());
+            setMinimumSize(getPreferredSize());
         }
-        setLocationRelativeTo(null);
 
-        if(resizeable && adddResizer) {
+        if(resizeable && addResizer) {
             resizer.registerComponent(this);
             resizer.setMinimumSize(getMinimumSize());
             resizer.setDragInsets(new Insets(10,10,10,10));
@@ -218,6 +437,19 @@ public class EForm extends JFrame implements PropertyChangeListener {
             x.setForeground(theme.getForeground());
         });
 
+        allComboBoxes.forEach(x -> {
+            BasicComboPopup popup = (BasicComboPopup)(x.getAccessibleContext().getAccessibleChild(0));
+
+            popup.getList().setBackground(theme.getComboboxBackground());
+            popup.getList().setSelectionBackground(theme.getComboboxHoverBackground());
+            popup.getList().setForeground(theme.getForeground());
+            popup.getList().setSelectionForeground(theme.getForeground());
+        });
+
+        allSeparators.forEach(x -> {
+            x.setBackground(theme.getBackground());
+        });
+
         if(labelWindowMinimize != null) {
             updateWindowControlLabel(labelWindowMinimize);
         }
@@ -230,6 +462,8 @@ public class EForm extends JFrame implements PropertyChangeListener {
             updateWindowControlLabel(labelWindowClose);
         }
 
+        updateWindowBorder();
+        styleSidebar(theme);
         themeChangeUser(theme);
     }
 
@@ -254,7 +488,17 @@ public class EForm extends JFrame implements PropertyChangeListener {
             x.setFont(font);
         });
 
+        allComboBoxes.forEach(x-> {
+            x.setFont(font);
+        });
+
         fontChangeUser(font);
+
+        if(parent != null) {
+            parent.updateSize(this);
+        } else {
+            pack();
+        }
     }
 
     /**
@@ -291,6 +535,21 @@ public class EForm extends JFrame implements PropertyChangeListener {
             x.setBorderPainted(false);
             x.setFocusPainted(false);
             x.setBorder(new EmptyBorder(6,6,6,6));
+        });
+
+        allComboBoxes.forEach(x -> {
+//            x.setRenderer(new ComboBoxRenderer());
+
+
+        });
+
+        allSeparators.forEach(x -> {
+            Dimension d = new Dimension(-1,1);;
+            if(x.getOrientation() == JSeparator.VERTICAL) {
+                d = new Dimension(1,-1);
+            }
+            x.setMaximumSize(d);
+            x.setMinimumSize(d);
         });
     }
 
@@ -329,6 +588,10 @@ public class EForm extends JFrame implements PropertyChangeListener {
             allCheckBoxes.add((JCheckBox) c);
         } else if(c instanceof JButton) {
             allButtons.add((JButton) c);
+        } else if(c instanceof JComboBox) {
+            allComboBoxes.add((JComboBox) c);
+        } else if(c instanceof JSeparator) {
+            allSeparators.add((JSeparator) c);
         }
     }
 
@@ -415,6 +678,9 @@ public class EForm extends JFrame implements PropertyChangeListener {
 
                     // move window to this position
                     setLocation(getLocation().x + moveX,getLocation().y + moveY);
+
+                    isMaximized = false;
+                    updateWindowControlLabel(labelWindowMaximize);
                 }
             });
 
@@ -424,7 +690,7 @@ public class EForm extends JFrame implements PropertyChangeListener {
         if(labelWindowMinimize != null) {
             labelWindowMinimize.addMouseListener(new MouseAdapter() {
                 @Override
-                public void mouseClicked(MouseEvent e) {
+                public void mouseReleased(MouseEvent e) {
                     setState(Frame.ICONIFIED);
                 }
 
@@ -445,7 +711,7 @@ public class EForm extends JFrame implements PropertyChangeListener {
         if(labelWindowMaximize != null) {
             labelWindowMaximize.addMouseListener(new MouseAdapter() {
                 @Override
-                public void mouseClicked(MouseEvent e) {
+                public void mouseReleased(MouseEvent e) {
                     maximizeNormalizeWindow();
                 }
 
@@ -466,8 +732,12 @@ public class EForm extends JFrame implements PropertyChangeListener {
         if(labelWindowClose != null) {
             labelWindowClose.addMouseListener(new MouseAdapter() {
                 @Override
-                public void mouseClicked(MouseEvent e) {
-                    System.exit(0);
+                public void mouseReleased(MouseEvent e) {
+                    if(exitOnClose) {
+                        System.exit(0);
+                    } else {
+                        dispose();
+                    }
                 }
 
                 @Override
@@ -572,6 +842,39 @@ public class EForm extends JFrame implements PropertyChangeListener {
                 }
             });
         });
+
+        if(paintWindowBorder) {
+            addWindowFocusListener(new WindowAdapter() {
+                @Override
+                public void windowGainedFocus(WindowEvent e) {
+                    super.windowGainedFocus(e);
+                    updateWindowBorder();
+                }
+
+                @Override
+                public void windowLostFocus(WindowEvent e) {
+                    super.windowLostFocus(e);
+                    updateWindowBorder();
+                }
+            });
+        }
+    }
+
+    /**
+     * This will update the window border (depends on whether the window has focus or not).
+     */
+    private void updateWindowBorder() {
+        Border border = config.getTheme().getInactiveWindowBorder();
+
+        if(!paintWindowBorder) {
+            return;
+        }
+
+        if(isFocused()) {
+            border = config.getTheme().getWindowBorder();
+        }
+
+        ((JPanel)(getContentPane())).setBorder(border);
     }
 
     /**
@@ -589,11 +892,11 @@ public class EForm extends JFrame implements PropertyChangeListener {
         switch(label.getName()) {
             case "WindowMinimize": {
                 switch(config.getTheme().getName()) {
-                    case "Light": {
+                    case "Hell": {
                         name += "minimize_black.png";
                         break;
                     }
-                    case "Dark": {
+                    case "Dunkel": {
                         name += "minimize_white.png";
                         break;
                     }
@@ -605,7 +908,7 @@ public class EForm extends JFrame implements PropertyChangeListener {
             }
             case "WindowMaximize": {
                 switch(config.getTheme().getName()) {
-                    case "Light": {
+                    case "Hell": {
                         if(isMaximized) {
                             name += "restore_black.png";
                         } else{
@@ -613,7 +916,7 @@ public class EForm extends JFrame implements PropertyChangeListener {
                         }
                         break;
                     }
-                    case "Dark": {
+                    case "Dunkel": {
                         if(isMaximized) {
                             name += "restore_white.png";
                         } else{
@@ -629,11 +932,11 @@ public class EForm extends JFrame implements PropertyChangeListener {
             }
             case "WindowClose": {
                 switch(config.getTheme().getName()) {
-                    case "Light": {
+                    case "Hell": {
                         name += "close_black.png";
                         break;
                     }
-                    case "Dark": {
+                    case "Dunkel": {
                         name += "close_white.png";
                         break;
                     }
@@ -693,6 +996,43 @@ public class EForm extends JFrame implements PropertyChangeListener {
         isMaximized = false;
         setSize(width, height);
         setLocation(x, y);
+    }
+
+    /**
+     * This will transfer all components from one menu to another.
+     * @param src Source
+     * @param dst Destination
+     */
+    public void transfer(JPanel src, JPanel dst) {
+        Component[] list = src.getComponents();
+        GridLayoutManager layout = (GridLayoutManager) src.getLayout();
+
+        if(list.length == 0) {
+            return;
+        }
+
+        dst.setLayout(layout);
+
+        for (int i=0; i < list.length; ++i) {
+            Component c = list[i];
+            dst.add(c, layout.getConstraintsForComponent(c));
+        }
+    }
+
+    /**
+     * This will return with the menu pane.
+     * @return Content pane.
+     */
+    public JPanel getMenu() {
+        return menu;
+    }
+
+    /**
+     * This should be overwritten by the parent form in order to update its size
+     * once children forms has changed their size.
+     * @param x Form with new size.
+     */
+    public void updateSize(EForm x) {
     }
 
     /**
